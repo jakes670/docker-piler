@@ -13,47 +13,45 @@ PILER_CONF="/etc/piler/piler.conf"
 CONFIG_SITE_PHP="/etc/piler/config-site.php"
 CONFIG_PHP="/var/piler/www/config.php"
 
+
+
 create_dir_if_not_exist() {
    [[ -d $1 ]] || mkdir $1
 }
 
 create_mysql_db() {
    echo "Creating mysql database"
-
    sed -e "s%MYSQL_HOSTNAME%${MYSQL_HOSTNAME}%g" \
        -e "s%MYSQL_DATABASE%${MYSQL_DATABASE}%g" \
        -e "s%MYSQL_USERNAME%${PILER_USER}%g" \
        -e "s%MYSQL_PASSWORD%${MYSQL_PILER_PASSWORD}%g" \
        "${DATAROOTDIR}/piler/db-mysql-root.sql.in" | \
-       mysql -h "$MYSQL_HOSTNAME" -u root --password="$MYSQL_ROOT_PASSWORD"
-
-   mysql -h "$MYSQL_HOSTNAME" -u "$PILER_USER" --password="$MYSQL_PILER_PASSWORD" "$MYSQL_DATABASE" < "${DATAROOTDIR}/piler/db-mysql.sql"
-
+       mysql --host="${MYSQL_HOSTNAME}" --user=root --password="${MYSQL_ROOT_PASSWORD}"
+    
+   mysql --host="${MYSQL_HOSTNAME}" --user=root --password="${MYSQL_ROOT_PASSWORD}" "$MYSQL_DATABASE" < "${DATAROOTDIR}/piler/db-mysql.sql"
    echo "Done."
 }
 
 
 pre_seed_sphinx() {
    echo "Writing sphinx configuration"
-###   sed -e "s%MYSQL_HOSTNAME%${MYSQL_HOSTNAME}%" \
-###       -e "s%MYSQL_DATABASE%${MYSQL_DATABASE}%" \
-###       -e "s%MYSQL_USERNAME%${PILER_USER}%" \
-###       -e "s%MYSQL_PASSWORD%${MYSQL_PILER_PASSWORD}%" \
-###       -e "s%220%311%" \
-###       -e "s%type = mysql%type = mysql\n   sql_sock = /var/run/mysqld/mysqld.sock%" \
-###       "${SYSCONFDIR}/piler/sphinx.conf.dist" > "$SPHINXCFG"
-# without hardedit sphinx to 311, and leave it on 220
+
+   ls -la "/etc/piler/"
+   cat /etc/piler/sphinx.conf.dist
+
    sed -e "s%MYSQL_HOSTNAME%${MYSQL_HOSTNAME}%" \
        -e "s%MYSQL_DATABASE%${MYSQL_DATABASE}%" \
        -e "s%MYSQL_USERNAME%${PILER_USER}%" \
        -e "s%MYSQL_PASSWORD%${MYSQL_PILER_PASSWORD}%" \
+       -e "s%@LOCALSTATEDIR@%/var%" \
        -e "s%type = mysql%type = mysql\n   sql_sock = /var/run/mysqld/mysqld.sock%" \
-       "${SYSCONFDIR}/piler/sphinx.conf.dist" > "$SPHINXCFG"
+       "/etc/piler/sphinx.conf.dist" > "/etc/piler/sphinx.conf"
 
    echo "Done."
+   cat /etc/piler/sphinx.conf
 
    echo "Initializing sphinx indices"
-   su "$PILER_USER" -c "indexer --all --config ${SYSCONFDIR}/piler/sphinx.conf"
+   su "$PILER_USER" -c "indexer --rotate --all --config /etc/piler/sphinx.conf" && true
    echo "Done."
 }
 
@@ -62,7 +60,7 @@ fix_configs() {
    local piler_nginx_conf="/etc/piler/piler-nginx.conf"
 
    if [[ ! -f "$PILER_CONF" ]]; then
-      cp /etc/piler/piler.conf.dist "$PILER_CONF"
+      cp /etc/piler/example.conf "$PILER_CONF"
       chmod 640 "$PILER_CONF"
       chown root:piler "$PILER_CONF"
       sed -i "s%hostid=.*%hostid=${PILER_HOST%%:*}%" "$PILER_CONF"
@@ -85,35 +83,6 @@ fix_configs() {
    sed -i "s%^\$config\['PILER_BINARY'\].*%\$config\['PILER_BINARY'\] = '/usr/sbin/piler';%" "$CONFIG_PHP"
 }
 
-if [[ ! -d /config/etc/piler ]]; then
-  set -vx
-  create_dir_if_not_exist /config/etc
-  cp -pr --no-clobber --verbose /etc/piler /config/etc/piler
-  mv /etc/piler /etc/piler.org
-  ln -s /config/etc/piler /etc/piler
-fi
-
-if [[ ! -d /data/piler/imap ]]; then
-  set -vx
-  create_dir_if_not_exist /data/piler
-  cp -pr --no-clobber --verbose /var/piler/imap /data/piler/imap
-  mv /var/piler/imap /var/piler/imap.org
-  ln -s /data/piler/imap /var/piler/imap
-fi
-
-if [[ ! -d /data/piler/store ]]; then
-  set -vx
-  create_dir_if_not_exist /data/piler
-  cp -pr --no-clobber --verbose /var/piler/store /data/piler/store
-  mv /var/piler/store /var/piler/store.org
-  ln -s /data/piler/store /var/piler/store
-fi
-
-#[[ -d /config/etc/piler ]] || cp -pr --no-clobber --verbose /etc/piler /config/etc/piler
-#/config/etc/piler
-#ln -s /config/etc/piler /etc/piler
-
-
 create_dir_if_not_exist /var/piler
 create_dir_if_not_exist /var/piler/error
 create_dir_if_not_exist /var/piler/imap
@@ -126,8 +95,8 @@ create_dir_if_not_exist /var/run/piler
 create_dir_if_not_exist /var/piler/www
 create_dir_if_not_exist /var/piler/www/tmp 
 create_dir_if_not_exist /var/piler/www/images
-/bin/bash /piler-postinst || true
-
+echo "run postinst\n"
+/bin/bash /piler-postinst
 
 service rsyslog start
 service mysql start

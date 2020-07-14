@@ -1,11 +1,12 @@
 # Mailpiler as Docker
+[Piler](http://www.mailpiler.org/wiki/current:index) is a feature rich open source email archiving solution. This is a project to package it as a docker image.
 
 ## Why docker
 
- * setup multiple mailpiler instances on a single server
- * easy and fast setup
- * reproducible setup
- + easy backup
+* setup multiple mailpiler instances on a single server
+* easy and fast setup
+* reproducible setup
+* easy backup
 
 ## How to start
 
@@ -13,9 +14,31 @@
 #install docker
 curl -sSL https://get.docker.com/ | CHANNEL=stable sh
 # start docker mailpiler instance (use port 2525 for smtp and 8025 for http)
-docker run -d --restart unless-stopped --name piler-instance-1 -p 2525:25 -p 8025:80  -v /var/piler-data-instance-1:/var/piler -e PILER_HOST=archive.domain.com ebtc/piler
+docker run -d --restart unless-stopped --name piler-instance-1 \
+ -p 2525:25 -p 8025:80 \
+ -v /var/piler-1-data-:/var/piler \
+ -v /var/piler-1-config:/config \
+ -e PILER_HOST=archive.domain.com ebtc/piler
 ```
 
+Shell access whilst the container is running: 
+
+```bash
+docker exec -it piler-1 /bin/bash
+```
+
+
+### Testing and rebuilder instance
+
+```bash
+docker rm piler-1
+docker run -d --restart unless-stopped --name piler-1 \
+ -p 2525:25 -p 8025:80 \
+ -v /var/piler-1-data-:/data \
+ -v /var/piler-1-config:/config \
+ -e PILER_HOST=archive.domain.com ebtc/piler
+docker logs piler --follow
+```
 
 ## testing the beta based on Ubuntu 20.04 LTS Focal Fossa
   PILER_VAR_DATA=/var/piler-data ; 
@@ -40,9 +63,9 @@ In this instance `PUID=1000` and `PGID=1000`, to find yours use `id user` as bel
 ```
 ```
 default logins:
-admin account:	admin@local
+admin account: admin@local
 admin password: pilerrocks
-auditor account:	auditor@local
+auditor account auditor@local
 auditor password: auditor
 ```
 

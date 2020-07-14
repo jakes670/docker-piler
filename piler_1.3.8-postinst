@@ -38,6 +38,7 @@ make_piler_key() {
    chmod 640 "${config_dir}/piler.key"
 }
 
+log "Run postinst"
 
 if [[ -f /etc/redhat-release ]]; then WWW_GROUP="php-fpm"; fi
 
@@ -71,9 +72,12 @@ if [[ -d /var/piler/customer ]]; then
    chmod 770 /var/piler/customer
 fi
 
-if [[ ! -f /etc/piler/sphinx.conf ]]; then
-   cp /etc/piler/sphinx.conf.dist /etc/piler/sphinx.conf
-   chmod +x /etc/piler/sphinx.conf
+ls /etc/piler
+
+if [[ ! -f /etc/piler/sphinx.conf.dist ]]; then
+   log "Copy default sphinx.conf"
+   cp ${BUILD_DIR}/etc/sphinx.conf.in /etc/piler/sphinx.conf.dist
+   chmod +x /etc/piler/sphinx.conf.dist
 fi
 
 log "Checking for /etc/piler/config-site.php"
