@@ -1,48 +1,21 @@
-## WorkInProgress of the docker:
-- PUID and PGID ([please test it ;-) ](#testing-the-beta-based-on-ubuntu-2004-lts-focal-fossa) 
-- DONE, use the tar not the precompiled DEB, as the DEB is amd64 only.
-- 70% DONE, hope i can add amd64, arm, arm64, ppc64le, s390x, as Supported Architectures
-- 90% DONE, use ubuntu focal as docker base
-- docker ENV for password setting
-- generate secure random MYSQL passwords
+# Mailpiler as Docker
 
-## IMPORTANT!
-Note that piler stores all emails and attachments as separate files. You may tweak inode ratio, if necessary.
-IMPORTANT! Make sure you never lose/overwrite the key otherwise you won't access your archive ever again. So whenever you upgrade be sure to keep your existing key file. Also NEVER change the iv parameter in piler.conf after installation. The piler mysql database contains essential information, including metadata, permissions, tags, etc. If you lost the piler database, your archive would stop working! So you must take a good care of the piler database.
+## Why docker
 
+ * setup multiple mailpiler instances on a single server
+ * easy and fast setup
+ * reproducible setup
+ + easy backup
 
-## Usage
+## How to start
 
-Here are some example snippets to help you get started creating a container.
+```bash
+#install docker
+curl -sSL https://get.docker.com/ | CHANNEL=stable sh
+# start docker mailpiler instance (use port 2525 for smtp and 8025 for http)
+docker run -d --restart unless-stopped --name piler-instance-1 -p 2525:25 -p 8025:80  -v /var/piler-data-instance-1:/var/piler -e PILER_HOST=archive.domain.com ebtc/piler
+```
 
-### docker
-
-```
-docker create \
-  --name=piler \
-  -e PUID=1000 `#optional` \
-  -e PGID=1000 `#optional` \
-  -e TZ=Europe/London `#optional` \
-  -e PILER_HOST=archive.yourdomain.com \
-  -p 443:443 `#optional` \
-  -p 80:80 \
-  -p 25:25 \
-  -v </path/to/appdata/config>:/var/piler \
-  --restart unless-stopped \
-  woa7/piler:1.3.7
-```
-e.g.
-```
-PILER_VAR_DATA=/var/piler-data
-docker create --name=piler -e PUID=1000 `#optional` -e PGID=1000 `#optional` -e PILER_HOST=archive.example.org -p 443:443 -p 25:25 -v ${PILER_VAR_DATA:-/default/path/to/appdata/config}:/var/piler --restart unless-stopped woa7/piler:1.3.7
-docker start piler
-```
-or
-```
-  PILER_VAR_DATA=/var/piler-data
-  docker run -d --name piler -p 25:25 -p 80:80 -p 443:443 -v ${PILER_VAR_DATA:-null}:/var/piler -e PILER_HOST=archive.example.org woa7/piler
-```
-* Shell access whilst the container is running: `docker exec -it piler /bin/bash`
 
 ## testing the beta based on Ubuntu 20.04 LTS Focal Fossa
   PILER_VAR_DATA=/var/piler-data ; 
@@ -52,7 +25,7 @@ or
   PILER_VAR_DATA=/var/piler-data ; 
   docker run -d --name piler -e PUID=$(id -u) -e PGID=$(id -g) -e PILER_HOST=archive.example.org -p 25:25 -p 80:80 -p 443:443 -v ${PILER_VAR_DATA/config:-/dummy}:/config -v ${PILER_VAR_DATA/data:-/dummy}:/data woa7/piler:focal
 
-# User / Group Identifiers
+## User / Group Identifiers
 
 When using volumes (`-v` flags) permissions issues can arise between the host OS and the container, we avoid this issue by allowing you to specify the user `PUID` and group `PGID`.
 
@@ -94,31 +67,28 @@ How to run the image
 
 Our image support only `amd64` at the time, as architectures. as the sphinx is only `amd64`.
 
-## Documentation of piler it self:
-http://www.mailpiler.org/wiki/current:index
+## What is piler?
 
-# piler features from: http://www.mailpiler.org/
 Email archiving provides lots of benefits to your company. Piler is a feature rich open source email archiving solution, and a viable alternative to commercial email archiving products; check out the comparison with Mailarchiva.
 
 Piler has a nice GUI written in PHP supporting several authentication methods (AD/LDAP, SSO, Google OAuth, 2 FA, IMAP, POP3). Be sure to try the online demo!
 
 Piler supports
 
-archiving and retention rules
-legal hold
-deduplication
-digital fingerprinting and verification
-full text search
-tagging emails
-view, export, restore emails
-bulk import/export messages
-audit logs
-Google Apps
-Office 365
-and many more
+* archiving and retention rules
+* legal hold
+* deduplication
+* digital fingerprinting and verification
+* full text search
+* tagging emails
+* view, export, restore emails
+* bulk import/export messages
+* audit logs
+* Google Apps
+* Office 365
+* and many more
 
-# Piler basics in a nutshell from: http://www.mailpiler.org/wiki/current:piler-basics
-The piler email archiver uses the following components:
+How does it work: 
 
 mysql: piler stores crucial metadata of the messages
 sphinx: a search engine used by the gui to return the search results
