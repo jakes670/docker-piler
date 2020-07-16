@@ -13,7 +13,7 @@
 
 ## How to start
 
-1. Install mailpiler via docker
+### 1. Install docker and docker-compose
 ```bash
 #install docker and docker-compose
 curl -sSL https://get.docker.com/ | CHANNEL=stable sh
@@ -21,7 +21,7 @@ sudo curl -L "https://github.com/docker/compose/releases/download/1.26.2/docker-
 sudo chmod +x /usr/local/bin/docker-compose
 ```
 
-2.Configure your setup
+### 2.Configure your piler docker setup
 
 Copy [docker-compose.examle.yml](https://github.com/ebtcorg/docker-piler/blob/master/docker-compose.example.yml) as a new file in a folder for piler.
 
@@ -35,13 +35,13 @@ Edit the docker-compose.yml
 Then run:
 
 ```bash
-sudo mkdir /var/piler-test-config
-sudo mkdir /var/piler-test-data
-sudo mkdir /var/piler-test-mariadb
+sudo mkdir /var/piler-config
+sudo mkdir /var/piler-data
+sudo mkdir /var/piler-mariadb
 sudo docker-compose up -d
 ```
 
-3. Setup reverse proxy for web interface under a different domain
+### 3. Setup reverse proxy for web interface under a different domain
 
 Apache2:
 
@@ -51,13 +51,15 @@ ProxyPassReverse / http://localhost:8025/
 ```
 
 NGINX:  See this [guide](https://docs.nginx.com/nginx/admin-guide/web-server/reverse-proxy/)
+
 ```ini
 location / {
     proxy_pass http://localhost:8025/;
 }
 ```
 
-4. Login and change password and usernames
+### 4. Login and change password and usernames
+
  + Admin Account: `admin@local`:`pilerrocks`
  + Auditor Account: `auditor@local` : `auditor`
 

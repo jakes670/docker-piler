@@ -12,7 +12,7 @@ services:
       MYSQL_PASSWORD: piler
       MYSQL_DATABASE: piler
     volumes:
-      - /var/piler-test-mariadb:/var/lib/mysql
+      - /var/piler-mariadb:/var/lib/mysql
 
   piler:
     image: ebtc/piler
@@ -21,8 +21,8 @@ services:
       - "2525:25"
       - "8025:80"
     volumes:
-      - /var/piler-test-data:/var/piler
-      - /var/piler-test-config:/etc/piler
+      - /var/piler-data:/var/piler
+      - /var/piler-config:/etc/piler
     environment:
       PILER_HOST: archive.domain.com
       MYSQL_HOSTNAME: db
