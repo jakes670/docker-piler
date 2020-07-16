@@ -5,14 +5,21 @@ set -o pipefail
 set -o nounset
 
 sudo service docker start
-sudo rm /var/piler-1-config -rf && true
-sudo rm /var/piler-1-data -rf && true
-sudo rm /var/piler-1-mariadb -rf && true
-sudo docker build --tag pilertest:latest . 
+sudo docker build --tag pilertest:latest .
 
-cp docker-compose.example.yml docker-compose.yml
+cd compose-clean-test
 
-docker-compose up -d
+sudo docker-compose rm -sf
+
+sudo rm /var/piler-test-config -rf && true
+sudo rm /var/piler-test-data -rf && true
+sudo mkdir /var/piler-test-config
+sudo mkdir /var/piler-test-data
+
+#sudo rm /var/piler-test-mariadb -rf && true
+#sudo mkdir /var/piler-test-mariadb
+
+sudo docker-compose up -d
  
-echo "Docker Piler instance is up and running: Show the logs\n"
-sudo docker logs piler-1 --follow
+echo "Docker Piler instance is up and running: Show the logs"
+sudo docker logs composecleantest_service_1 --follow

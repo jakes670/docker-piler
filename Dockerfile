@@ -6,7 +6,8 @@ LABEL maintainer="ebtcorg"
 ARG DEBIAN_FRONTEND="noninteractive"
 ENV MYSQL_HOSTNAME="localhost" \
     MYSQL_DATABASE="piler" \
-    MYSQL_PILER_PASSWORD="piler123" \
+    MYSQL_PASSWORD="piler123" \
+    MYSQL_USER="piler" \
     MYSQL_ROOT_PASSWORD="abcde123" \
     PACKAGE="${PACKAGE:-piler-1.3.8.tar.gz}"
 
@@ -50,12 +51,12 @@ RUN \
     sed -i 's/mail.[iwe].*//' /etc/rsyslog.conf && \
     sed -i '/session    required     pam_loginuid.so/c\#session    required     pam_loginuid.so' /etc/pam.d/cron && \
     mkdir /etc/piler && \
-    printf "[mysql]\nuser = piler\npassword = ${MYSQL_PILER_PASSWORD}\n" > /etc/piler/.my.cnf && \
+    printf "[mysql]\nuser = ${MYSQL_USER}\npassword = ${MYSQL_PASSWORD}\n" > /etc/piler/.my.cnf && \
     printf "[mysql]\nuser = root\npassword = ${MYSQL_ROOT_PASSWORD}\n" > /root/.my.cnf && \
     echo "alias mysql='mysql --defaults-file=/etc/piler/.my.cnf'" > /root/.bashrc && \
     echo "alias t='tail -f /var/log/syslog'" >> /root/.bashrc
 
-ADD "https://bitbucket.org/jsuto/piler/downloads/${PACKAGE}" "/${PACKAGE}"
+RUN wget "https://bitbucket.org/jsuto/piler/downloads/${PACKAGE}" -O "/${PACKAGE}"
 
 RUN echo "**** install piler package via source tgz ****"  && \
     tar --directory=${BUILD_DIR} --restrict --strip-components=1 -zxvf ${PACKAGE} && \

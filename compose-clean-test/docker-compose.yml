@@ -14,8 +14,8 @@ services:
     volumes:
       - /var/piler-test-mariadb:/var/lib/mysql
 
-  piler:
-    image: ebtc/piler
+  service:
+    image: pilertest:latest
     restart: always
     ports:
       - "2525:25"
@@ -24,7 +24,7 @@ services:
       - /var/piler-test-data:/var/piler
       - /var/piler-test-config:/etc/piler
     environment:
-      PILER_HOST: archive.domain.com
+      PILER_HOST: localhost
       MYSQL_HOSTNAME: db
       MYSQL_ROOT_PASSWORD: TestTest
       MYSQL_USER: piler

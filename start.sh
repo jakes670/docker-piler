@@ -17,14 +17,15 @@ create_dir_if_not_exist() {
 
 create_mysql_db() {
    echo "Creating mysql database"
+   mysql -N -s -h"$MYSQL_HOSTNAME" --user="$MYSQL_USER" --password="$MYSQL_PASSWORD" "$MYSQL_DATABASE"  -e "drop database ${MYSQL_DATABASE};"
    sed -e "s%MYSQL_HOSTNAME%${MYSQL_HOSTNAME}%g" \
        -e "s%MYSQL_DATABASE%${MYSQL_DATABASE}%g" \
-       -e "s%MYSQL_USERNAME%${PILER_USER}%g" \
-       -e "s%MYSQL_PASSWORD%${MYSQL_PILER_PASSWORD}%g" \
+       -e "s%MYSQL_USERNAME%${MYSQL_USER}%g" \
+       -e "s%MYSQL_PASSWORD%${MYSQL_PASSWORD}%g" \
        "${DATAROOTDIR}/piler/db-mysql-root.sql.in" | \
        mysql --host="${MYSQL_HOSTNAME}" --user=root --password="${MYSQL_ROOT_PASSWORD}"
     
-   mysql --host="${MYSQL_HOSTNAME}" --user=root --password="${MYSQL_ROOT_PASSWORD}" "$MYSQL_DATABASE" < "${DATAROOTDIR}/piler/db-mysql.sql"
+   mysql --host="${MYSQL_HOSTNAME}" --user="${MYSQL_USER}" --password="${MYSQL_PASSWORD}" "$MYSQL_DATABASE" < "${DATAROOTDIR}/piler/db-mysql.sql"
    echo "Done."
 }
 
@@ -34,10 +35,10 @@ pre_seed_sphinx() {
 
    sed -e "s%MYSQL_HOSTNAME%${MYSQL_HOSTNAME}%" \
        -e "s%MYSQL_DATABASE%${MYSQL_DATABASE}%" \
-       -e "s%MYSQL_USERNAME%${PILER_USER}%" \
-       -e "s%MYSQL_PASSWORD%${MYSQL_PILER_PASSWORD}%" \
+       -e "s%MYSQL_USERNAME%${MYSQL_USER}%" \
+       -e "s%MYSQL_PASSWORD%${MYSQL_PASSWORD}%" \
        -e "s%@LOCALSTATEDIR@%/var%" \
-       -e "s%type = mysql%type = mysql\n   sql_sock = /var/run/mysqld/mysqld.sock%" \
+       -e "s%type = mysql%type = mysql%" \
        "/etc/piler/sphinx.conf.dist" > "/etc/piler/sphinx.conf"
 
    echo "Done."
@@ -57,7 +58,8 @@ fix_configs() {
       chown root:piler "/etc/piler/piler.conf"
       sed -i "s%hostid=.*%hostid=${PILER_HOST%%:*}%" "/etc/piler/piler.conf"
       sed -i "s%tls_enable=.*%tls_enable=1%" "/etc/piler/piler.conf"
-      sed -i "s%mysqlpwd=.*%mysqlpwd=${MYSQL_PILER_PASSWORD}%" "/etc/piler/piler.conf"
+      sed -i "s%mysqlsocket=.*%mysqlsocket=\nmysqlhost=${MYSQL_HOSTNAME}\nmysqlport=3306%" "/etc/piler/piler.conf"
+      sed -i "s%mysqlpwd=.*%mysqlpwd=${MYSQL_PASSWORD}%" "/etc/piler/piler.conf"
    fi
 
    if [[ ! -f "$piler_nginx_conf" ]]; then
@@ -68,11 +70,12 @@ fix_configs() {
    ln -sf "$piler_nginx_conf" /etc/nginx/sites-enabled/piler
 
    sed -i "s%HOSTNAME%${PILER_HOST}%" "$CONFIG_SITE_PHP"
-   sed -i "s%MYSQL_PASSWORD%${MYSQL_PILER_PASSWORD}%" "$CONFIG_SITE_PHP"
+   sed -i "s%MYSQL_PASSWORD%${MYSQL_PASSWORD}%" "$CONFIG_SITE_PHP"
 
    sed -i "s%^\$config\['DECRYPT_BINARY'\].*%\$config\['DECRYPT_BINARY'\] = '/usr/bin/pilerget';%" "$CONFIG_PHP"
    sed -i "s%^\$config\['DECRYPT_ATTACHMENT_BINARY'\].*%\$config\['DECRYPT_ATTACHMENT_BINARY'\] = '/usr/bin/pileraget';%" "$CONFIG_PHP"
    sed -i "s%^\$config\['PILER_BINARY'\].*%\$config\['PILER_BINARY'\] = '/usr/sbin/piler';%" "$CONFIG_PHP"
+   sed -i "s%^\$config\['DB_HOSTNAME'\].*%\$config\['DB_HOSTNAME'\] = '${MYSQL_HOSTNAME}';%" "$CONFIG_PHP"
 }
 
 create_dir_if_not_exist /var/piler
@@ -90,15 +93,22 @@ create_dir_if_not_exist /var/piler/www/images
 echo "run postinst\n"
 /bin/bash /piler-postinst
 
-ls -la /var
-ls -la /var/lib
-ls -la /var/lib/mysql
-cat /var/log/mysql/error.log
-
 service rsyslog start
-service mysql start || (cat /var/log/mysql/error.log && exit 1)
 
-mysqlshow -h "$MYSQL_HOSTNAME" -u "$PILER_USER" --password="$MYSQL_PILER_PASSWORD" "$MYSQL_DATABASE" > /dev/null 2>&1 || create_mysql_db
+echo "waiting for mysql"
+while ! mysqladmin ping -h"$MYSQL_HOSTNAME" --silent; do
+    echo -n "."
+    sleep 2
+done
+
+if [ $(mysql -N -s -h"$MYSQL_HOSTNAME" --user="$MYSQL_USER" --password="$MYSQL_PASSWORD" "$MYSQL_DATABASE"  -e "select count(*) FROM INFORMATION_SCHEMA.TABLES WHERE table_name='sph_index';") -gt 0 ];
+then
+    echo "mariadb is well"
+    mysql -N -s -h"$MYSQL_HOSTNAME" --user="$MYSQL_USER" --password="$MYSQL_PASSWORD" "$MYSQL_DATABASE"  -e "select count(*) FROM INFORMATION_SCHEMA.TABLES WHERE table_name='sph_index';"
+else
+    create_mysql_db
+fi
+
 pre_seed_sphinx
 fix_configs
 

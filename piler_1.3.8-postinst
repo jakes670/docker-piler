@@ -40,13 +40,9 @@ make_piler_key() {
 
 log "Run postinst"
 
-sudo chown -R mysql:mysql /var/lib/mysql
-
 log "run make install "
 
 cd ${BUILD_DIR} && su -c 'make install' && ldconfig
-
-
 
 if [[ -f /etc/redhat-release ]]; then WWW_GROUP="php-fpm"; fi
 
@@ -105,10 +101,6 @@ if [[ -f /etc/piler/sphinx.tmpl.slave.dist ]]; then
    log "Checking for /etc/piler/sphinx.tmpl.slave"
 
    [[ -f /etc/piler/sphinx.tmpl.slave ]] || cp /etc/piler/sphinx.tmpl.slave.dist /etc/piler/sphinx.tmpl.slave
-fi
-
-if [[ -f /etc/apt/sources.list ]]; then
-   [[ $(grep -c stretch /etc/apt/sources.list) -eq 0 ]] || sed -i 's/Engine=InnoDB;/Engine=InnoDB ROW_FORMAT=DYNAMIC;/g' /usr/share/piler/db-mysql.sql
 fi
 
 if [[ -f /usr/libexec/piler/piler.service ]]; then
