@@ -15,20 +15,33 @@
 
 1. Install mailpiler via docker
 ```bash
-#install docker
+#install docker and docker-compose
 curl -sSL https://get.docker.com/ | CHANNEL=stable sh
-# start docker mailpiler instance (use port 2525 for smtp and 8025 for http)
-docker run -d --restart unless-stopped --name piler-1 \
-  -e PUID=$(id -u) -e PGID=$(id -g) \
-  -p 2525:25 -p localhost:8025:80 \
-  -v /var/piler-1-data:/var/piler \
-  -v /var/piler-1-config:/etc/piler \
-  -v /var/piler-1-logs:/var/logs \
-  -v /var/piler-1-mariadb:/var/lib/mysql \
- -e PILER_HOST=archive.domain.com ebtc/piler
+sudo curl -L "https://github.com/docker/compose/releases/download/1.26.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+sudo chmod +x /usr/local/bin/docker-compose
 ```
 
-2. Setup reverse proxy for web interface under a different domain
+2.Configure your setup
+
+Copy [docker-compose.examle.yml](https://github.com/ebtcorg/docker-piler/blob/master/docker-compose.example.yml) as a new file in a folder for piler.
+
+```
+mkdir piler && cd piler
+wget https://raw.githubusercontent.com/ebtcorg/docker-piler/master/docker-compose.example.yml -O docker-compose.yml
+``` 
+
+Edit the docker-compose.yml
+
+Then run:
+
+```bash
+sudo mkdir /var/piler-test-config
+sudo mkdir /var/piler-test-data
+sudo mkdir /var/piler-test-mariadb
+sudo docker-compose up -d
+```
+
+3. Setup reverse proxy for web interface under a different domain
 
 Apache2:
 
@@ -44,7 +57,7 @@ location / {
 }
 ```
 
-3. Login and change password and usernames
+4. Login and change password and usernames
  + Admin Account: `admin@local`:`pilerrocks`
  + Auditor Account: `auditor@local` : `auditor`
 
@@ -53,37 +66,29 @@ location / {
 You can update piler be pulling an updated image from docker
 
 ```bash
-docker pull ebtc/piler
-docker stop piler-1
-docker rm piler-2
-docker run -d --restart unless-stopped --name piler-1 \
-  -e PUID=$(id -u) -e PGID=$(id -g) \
-  -p 2525:25 -p localhost:8025:80 \
-  -v /var/piler-1-data:/var/piler \
-  -v /var/piler-1-config:/etc/piler \
-  -v /var/piler-1-logs:/var/logs \
-  -v /var/piler-1-mariadb:/var/lib/mysql \
-  -e PILER_HOST=archive.domain.com ebtc/piler
+sudo docker pull ebtc/piler
+sudo docker-compose rm -f
+sudo docker-compose up
 ```
 
 Then login:
 
 ```bash
-docker exec -it piler-1 /bin/bash
+sudo docker exec -it {name of service} /bin/bash
 ```
 
 and follow the [instructions from piler](http://www.mailpiler.org/wiki/current:upgrade)
 
 ## Backup
 
-Just backup the folders `/var/piler-1-data` and `/var/piler-1-config`
+Just backup the folders `/var/piler-data` and `/var/piler-config` and `/var/piler-mariadb`
 
 ## Debugging
 
 Shell access whilst the container is running:
 
 ```bash
-docker exec -it piler-1 /bin/bash
+sudo docker exec -it {name of service} /bin/bash
 ```
 
 ## How to build by yourself
@@ -91,20 +96,18 @@ docker exec -it piler-1 /bin/bash
 ```bash
 git clone git@github.com:ebtcorg/docker-piler.git && cd docker-piler
 sudo service docker start
+```
+
+then run:
+
+```bash
 sudo docker build --tag pilertest:latest .
 ```
 
-### Testing and rebuilding instances
+Or run a test:
 
 ```bash
-docker rm piler-1
-sudo docker run -d --name piler-1 \
- -e PUID=$(id -u) -e PGID=$(id -g) \
- -p 2525:25 -p localhost:8025:80 -p localhost:8026:443 \
- -v /var/piler-1-data:/var/piler \
- -v /var/piler-1-config:/etc/piler \
- -e PILER_HOST=localhost pilertest:latest
-docker logs piler --follow
+bash cleantest.sh
 ```
 
 ## User / Group Identifiers
