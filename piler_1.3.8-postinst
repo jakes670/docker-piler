@@ -40,6 +40,8 @@ make_piler_key() {
 
 log "Run postinst"
 
+sudo chown -R mysql:mysql /var/lib/mysql
+
 log "run make install "
 
 cd ${BUILD_DIR} && su -c 'make install' && ldconfig
@@ -49,8 +51,6 @@ cd ${BUILD_DIR} && su -c 'make install' && ldconfig
 if [[ -f /etc/redhat-release ]]; then WWW_GROUP="php-fpm"; fi
 
 log "adding setuid permissions to piler binaries"
-
-ls -la /usr/bin
 
 for i in pileraget pilerexport pilerget pilerimport pilertest reindex pilerstats; do
    chown piler:piler /usr/bin/$i

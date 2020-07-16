@@ -20,9 +20,11 @@ curl -sSL https://get.docker.com/ | CHANNEL=stable sh
 # start docker mailpiler instance (use port 2525 for smtp and 8025 for http)
 docker run -d --restart unless-stopped --name piler-1 \
   -e PUID=$(id -u) -e PGID=$(id -g) \
- -p 2525:25 -p localhost:8025:80 \
- -v /var/piler-1-data:/var/piler \
- -v /var/piler-1-config:/etc/piler \
+  -p 2525:25 -p localhost:8025:80 \
+  -v /var/piler-1-data:/var/piler \
+  -v /var/piler-1-config:/etc/piler \
+  -v /var/piler-1-logs:/var/logs \
+  -v /var/piler-1-mariadb:/var/lib/mysql \
  -e PILER_HOST=archive.domain.com ebtc/piler
 ```
 
@@ -59,6 +61,8 @@ docker run -d --restart unless-stopped --name piler-1 \
   -p 2525:25 -p localhost:8025:80 \
   -v /var/piler-1-data:/var/piler \
   -v /var/piler-1-config:/etc/piler \
+  -v /var/piler-1-logs:/var/logs \
+  -v /var/piler-1-mariadb:/var/lib/mysql \
   -e PILER_HOST=archive.domain.com ebtc/piler
 ```
 
@@ -88,12 +92,6 @@ docker exec -it piler-1 /bin/bash
 git clone git@github.com:ebtcorg/docker-piler.git && cd docker-piler
 sudo service docker start
 sudo docker build --tag pilertest:latest .
-sudo docker rm --force piler-1 && true
-sudo docker run -d --name piler-1 \
- -p 2525:25 -p 8025:80 \
- -v /var/piler-1-data:/var/piler \
- -v /var/piler-1-config:/etc/piler \
- -e PILER_HOST=localhost pilertest:latest
 ```
 
 ### Testing and rebuilding instances
@@ -105,7 +103,7 @@ sudo docker run -d --name piler-1 \
  -p 2525:25 -p localhost:8025:80 -p localhost:8026:443 \
  -v /var/piler-1-data:/var/piler \
  -v /var/piler-1-config:/etc/piler \
- -e PILER_HOST=localhost ebtc/piler:latest
+ -e PILER_HOST=localhost pilertest:latest
 docker logs piler --follow
 ```
 

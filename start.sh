@@ -8,7 +8,6 @@ DATAROOTDIR="/usr/share"
 SYSCONFDIR="/etc"
 SPHINXCFG="/etc/piler/sphinx.conf"
 PILER_HOST=${PILER_HOST:-archive.yourdomain.com}
-PILER_CONF="/etc/piler/piler.conf"
 CONFIG_SITE_PHP="/etc/piler/config-site.php"
 CONFIG_PHP="/var/piler/www/config.php"
 
@@ -33,9 +32,6 @@ create_mysql_db() {
 pre_seed_sphinx() {
    echo "Writing sphinx configuration"
 
-   ls -la "/etc/piler/"
-   cat /etc/piler/sphinx.conf.dist
-
    sed -e "s%MYSQL_HOSTNAME%${MYSQL_HOSTNAME}%" \
        -e "s%MYSQL_DATABASE%${MYSQL_DATABASE}%" \
        -e "s%MYSQL_USERNAME%${PILER_USER}%" \
@@ -45,7 +41,6 @@ pre_seed_sphinx() {
        "/etc/piler/sphinx.conf.dist" > "/etc/piler/sphinx.conf"
 
    echo "Done."
-   cat /etc/piler/sphinx.conf
 
    echo "Initializing sphinx indices"
    su "$PILER_USER" -c "indexer --rotate --all --config /etc/piler/sphinx.conf" && true
@@ -56,13 +51,13 @@ pre_seed_sphinx() {
 fix_configs() {
    local piler_nginx_conf="/etc/piler/piler-nginx.conf"
 
-   if [[ ! -f "$PILER_CONF" ]]; then
-      cp /etc/piler/example.conf "$PILER_CONF"
-      chmod 640 "$PILER_CONF"
-      chown root:piler "$PILER_CONF"
-      sed -i "s%hostid=.*%hostid=${PILER_HOST%%:*}%" "$PILER_CONF"
-      sed -i "s%tls_enable=.*%tls_enable=1%" "$PILER_CONF"
-      sed -i "s%mysqlpwd=.*%mysqlpwd=${MYSQL_PILER_PASSWORD}%" "$PILER_CONF"
+   if [[ ! -f "/etc/piler/piler.conf" ]]; then
+      cp /etc/piler/piler.conf.dist "/etc/piler/piler.conf"
+      chmod 640 "/etc/piler/piler.conf"
+      chown root:piler "/etc/piler/piler.conf"
+      sed -i "s%hostid=.*%hostid=${PILER_HOST%%:*}%" "/etc/piler/piler.conf"
+      sed -i "s%tls_enable=.*%tls_enable=1%" "/etc/piler/piler.conf"
+      sed -i "s%mysqlpwd=.*%mysqlpwd=${MYSQL_PILER_PASSWORD}%" "/etc/piler/piler.conf"
    fi
 
    if [[ ! -f "$piler_nginx_conf" ]]; then
@@ -95,8 +90,13 @@ create_dir_if_not_exist /var/piler/www/images
 echo "run postinst\n"
 /bin/bash /piler-postinst
 
+ls -la /var
+ls -la /var/lib
+ls -la /var/lib/mysql
+cat /var/log/mysql/error.log
+
 service rsyslog start
-service mysql start
+service mysql start || (cat /var/log/mysql/error.log && exit 1)
 
 mysqlshow -h "$MYSQL_HOSTNAME" -u "$PILER_USER" --password="$MYSQL_PILER_PASSWORD" "$MYSQL_DATABASE" > /dev/null 2>&1 || create_mysql_db
 pre_seed_sphinx

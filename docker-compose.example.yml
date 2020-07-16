@@ -1,0 +1,26 @@
+# Use root/example as user/password credentials
+version: '3.1'
+
+services:
+
+  piler-db-1:
+    image: mariadb
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: TestTest
+    volumes:
+      - /var/piler-1-mariadb:/var/lib/mysql
+
+  piler-service-1:
+    image: ebtc/piler
+    restart: always
+    ports:
+      - 2525:25
+      - 8025:80
+    volumes:
+      - /var/piler-1-data:/var/piler
+      - /var/piler-1-config:/etc/piler
+    environment:
+      PILER_HOST: archive.domain.com
+      MYSQL_HOSTNAME: piler-db-1
+      MYSQL_ROOT_PASSWORD: TestTest

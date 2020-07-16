@@ -1,19 +1,14 @@
 FROM ubuntu:focal
 
-# set version label
-ARG BUILD_DATE
-ARG VERSION
-ARG PILER_VERSION
-LABEL build_version="ebtcorg/piler version:- ${VERSION} Build-date:- ${BUILD_DATE}"
 LABEL maintainer="ebtcorg"
 
 # environment settings
 ARG DEBIAN_FRONTEND="noninteractive"
-ENV DISTRO="focal" \
-MYSQL_HOSTNAME="localhost" \
-MYSQL_DATABASE="piler" \
-MYSQL_PILER_PASSWORD="piler123" \
-MYSQL_ROOT_PASSWORD="abcde123"
+ENV MYSQL_HOSTNAME="localhost" \
+    MYSQL_DATABASE="piler" \
+    MYSQL_PILER_PASSWORD="piler123" \
+    MYSQL_ROOT_PASSWORD="abcde123" \
+    PACKAGE="${PACKAGE:-piler-1.3.8.tar.gz}"
 
 # must be set in two steps, as in in one the env is still emty
 ENV PUID_NAME="${PUID_NAME:-piler}"
@@ -22,21 +17,10 @@ ENV PILER_USER="${PUID_NAME}"
 ENV BUILD_DIR="${BUILD_DIR:-/BUILD}"
 RUN mkdir -p ${BUILD_DIR}
 
-ENV PACKAGE_DOWNLOAD_URL_BASE="https://bitbucket.org/jsuto/piler/downloads" \
-PACKAGE="${PACKAGE:-piler-1.3.8.tar.gz}" \
-PACKAGE_DOWNLOAD_SHA256="${PACKAGE_DOWNLOAD_SHA256:-5d5b410bf32e1fcb994b6c12cc5ebfecd9364295242fdd8ab73bb958c027151f}"
-
 ENV HOME="/var/piler" \
 PUID_NAME=${PUID_NAME:-abc} \
 PUID=${PUID:-9001} \
 PGID=${PGID:-9001}
-
-RUN set -vx && echo "${PUID_NAME}" && echo "${PILER_USER}" && env && set || true
-
-RUN \
- echo "***** apt-get update && apt-get upgrade ****" && \
- apt-get update && \
- apt-get upgrade -y
 
 RUN \
  echo "**** install packages ****" && \
@@ -44,7 +28,9 @@ RUN \
  apt-get install -y \
  nvi wget curl rsyslog openssl sysstat php7.4-cli php7.4-cgi php7.4-mysql php7.4-fpm php7.4-zip php7.4-ldap \
  php7.4-gd php7.4-curl php7.4-xml catdoc unrtf poppler-utils nginx tnef sudo libodbc1 libpq5 libzip5 \
- libtre5 libwrap0 cron libmariadb3 libmysqlclient-dev python3 python3-mysqldb mariadb-server php-memcached memcached mariadb-client gpgv1 gpgv2
+ libtre5 libwrap0 cron libmariadb3 python3 python3-mysqldb php-memcached memcached mariadb-client gpgv1 gpgv2 \
+ sphinxsearch libmariadb-dev build-essential \
+ libcurl4-openssl-dev php7.4-dev libwrap0-dev libtre-dev libzip-dev libc6 libc6-dev
 
 # need on ubuntu / debian etc
 RUN \
@@ -59,15 +45,6 @@ RUN \
  chmod 0440 /etc/sudoers.d/82-apache-sudo-rc-piler-reload
 
 RUN \
- service mysql start && mysqladmin -u root password ${MYSQL_ROOT_PASSWORD}
-
-RUN sha256check () { printf %s\\n "$2 *$1" ; printf %s\\n "$2 *$1" | sha256sum -c - || $(printf %s\\n "sha256sum FAILD: $1 should $2 but is:" ; sha256sum $1 ; exit 1) ; } && \
-	curl -fSL -o ${PACKAGE} "${PACKAGE_DOWNLOAD_URL_BASE}/${PACKAGE}" && \
-	sha256check ${PACKAGE} ${PACKAGE_DOWNLOAD_SHA256}
-
-RUN echo "**** install sphinxsearch package via apt-get ****" && apt-get update && apt-get install -y sphinxsearch
- 
-RUN \
     sed -i 's/^/###/' /etc/init.d/sphinxsearch && \
     echo "### piler install, comment full file to stop the OS reindex" >> /etc/init.d/sphinxsearch && \
     sed -i 's/mail.[iwe].*//' /etc/rsyslog.conf && \
@@ -78,23 +55,16 @@ RUN \
     echo "alias mysql='mysql --defaults-file=/etc/piler/.my.cnf'" > /root/.bashrc && \
     echo "alias t='tail -f /var/log/syslog'" >> /root/.bashrc
 
+ADD "https://bitbucket.org/jsuto/piler/downloads/${PACKAGE}" "/${PACKAGE}"
+
 RUN echo "**** install piler package via source tgz ****"  && \
     tar --directory=${BUILD_DIR} --restrict --strip-components=1 -zxvf ${PACKAGE} && \
     rm -f ${PACKAGE}
 
-RUN set -vx && echo "${PUID_NAME}" && echo "${PILER_USER}" && env && set && ls -la $HOME || true
 RUN groupadd --gid $PGID piler
 RUN useradd --uid $PUID -g piler -d /var/piler -s /bin/bash piler
 RUN usermod -L piler
 RUN mkdir /var/piler && chmod 755 /var/piler
-
-RUN \
- echo "**** install build-essential ****" && \
- apt-get update && \
- apt-get install -y \
- build-essential \
- libcurl4-openssl-dev php7.4-dev libwrap0-dev libtre-dev libzip-dev libmariadb-dev libc6 libc6-dev \
- libc6-dev
 
 RUN echo "**** patch piler source ****"
 COPY 101-piler-1-3-7-sphinxsearch-310-220-compatily-php-if-fix.patch ${BUILD_DIR}
@@ -120,7 +90,7 @@ COPY start.sh /start.sh
 COPY piler_1.3.8-postinst /piler-postinst
 COPY piler_1.3.8-etc_piler-nginx.conf.dist-mod-php7.4 /piler-nginx.conf.dist
 
-EXPOSE 25 80 443
+EXPOSE 25 80
 
 VOLUME /etc/piler
 VOLUME /var/piler
