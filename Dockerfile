@@ -22,7 +22,6 @@ ENV PILER_USER="${PUID_NAME}"
 ENV BUILD_DIR="${BUILD_DIR:-/BUILD}"
 RUN mkdir -p ${BUILD_DIR}
 
-
 ENV PACKAGE_DOWNLOAD_URL_BASE="https://bitbucket.org/jsuto/piler/downloads" \
 PACKAGE="${PACKAGE:-piler-1.3.8.tar.gz}" \
 PACKAGE_DOWNLOAD_SHA256="${PACKAGE_DOWNLOAD_SHA256:-5d5b410bf32e1fcb994b6c12cc5ebfecd9364295242fdd8ab73bb958c027151f}"
@@ -38,7 +37,6 @@ RUN \
  echo "***** apt-get update && apt-get upgrade ****" && \
  apt-get update && \
  apt-get upgrade -y
-
 
 RUN \
  echo "**** install packages ****" && \
@@ -88,8 +86,7 @@ RUN set -vx && echo "${PUID_NAME}" && echo "${PILER_USER}" && env && set && ls -
 RUN groupadd --gid $PGID piler
 RUN useradd --uid $PUID -g piler -d /var/piler -s /bin/bash piler
 RUN usermod -L piler
-RUN mkdir -p /var/piler
-RUN chmod 755 /var/piler
+RUN mkdir /var/piler && chmod 755 /var/piler
 
 RUN \
  echo "**** install build-essential ****" && \
@@ -109,40 +106,22 @@ RUN echo "**** build piler package from source ****"  && \
         --prefix=/usr \
         --sysconfdir=/etc \
         --localstatedir=/var \
-        --with-database=mariadb  && \
-    make clean all && \
-    su -c 'make install' && \
-    ldconfig
+        --with-database=mariadb && \
+    make clean all
 
-RUN echo "**** piler unit_tests ****"  && \
-cd ${BUILD_DIR}/unit_tests && ./run.sh
-
-RUN echo "**** piler phpunit ****"  && \
-apt-get update && apt-get install -y phpunit && \
-cd ${BUILD_DIR} && phpunit
-###mysql -u piler -ppiler123 piler1 < /usr/share/piler/db-mysql.sql
-
-RUN echo "**** continue with the setup ****"  && \
-    crontab -u $PILER_USER /usr/share/piler/piler.cron && \
+RUN echo "**** continue with the setup ****" && \
     touch /var/log/mail.log && \
-    rm -f $PACKAGE /etc/nginx/sites-enabled/default && \
-    sed -i 's/#ngram/ngram/g' /etc/piler/sphinx.conf.dist && \
-    echo "FIX me ---sed -i 's/220/311/g' /etc/piler/sphinx.conf.dist---" && grep -i SPHINX_VERSION /etc/piler/sphinx.conf.dist && \
- echo "**** cleanup ****" && \
- apt-get purge --auto-remove -y && \
- apt-get clean && \
- rm -rf \
-	/tmp/* \
-	/var/lib/apt/lists/* \
-	/var/tmp/*
+    rm -f /etc/nginx/sites-enabled/default && \
+    echo "**** cleanup ****" && \
+    apt-get purge --auto-remove -y && \
+    apt-get clean
 
 COPY start.sh /start.sh
 COPY piler_1.3.8-postinst /piler-postinst
 COPY piler_1.3.8-etc_piler-nginx.conf.dist-mod-php7.4 /piler-nginx.conf.dist
-RUN $( [ -f /etc/piler/piler-nginx.conf.dist ] && mv /piler-nginx.conf.dist /piler-nginx.conf.dist-FILE-NOT-IN-USE || cp -p /piler-nginx.conf.dist /etc/piler/ )
 
-RUN set -vx && echo "${PUID_NAME}" && echo "${PILER_USER}" && env && set && ls -la $HOME || true
 EXPOSE 25 80 443
+
 VOLUME /etc/piler
 VOLUME /var/piler
 

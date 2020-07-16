@@ -69,7 +69,7 @@ fix_configs() {
    fi
 
    if [[ ! -f "$piler_nginx_conf" ]]; then
-      cp /etc/piler/piler-nginx.conf.dist "$piler_nginx_conf"
+      cp /piler-nginx.conf.dist "$piler_nginx_conf"
       sed -i "s%PILER_HOST%${PILER_HOST}%" "$piler_nginx_conf"
    fi
 

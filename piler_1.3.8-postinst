@@ -40,9 +40,17 @@ make_piler_key() {
 
 log "Run postinst"
 
+log "run make install "
+
+cd ${BUILD_DIR} && su -c 'make install' && ldconfig
+
+
+
 if [[ -f /etc/redhat-release ]]; then WWW_GROUP="php-fpm"; fi
 
 log "adding setuid permissions to piler binaries"
+
+ls -la /usr/bin
 
 for i in pileraget pilerexport pilerget pilerimport pilertest reindex pilerstats; do
    chown piler:piler /usr/bin/$i
@@ -72,18 +80,10 @@ if [[ -d /var/piler/customer ]]; then
    chmod 770 /var/piler/customer
 fi
 
-ls /etc/piler
-
-if [[ ! -f /etc/piler/sphinx.conf.dist ]]; then
-   log "Copy default sphinx.conf"
-   cp ${BUILD_DIR}/etc/sphinx.conf.in /etc/piler/sphinx.conf.dist
-   chmod +x /etc/piler/sphinx.conf.dist
-fi
-
 log "Checking for /etc/piler/config-site.php"
 
-if [[ ! -f /etc/piler/config-site.php ]] && [[ -f /etc/piler/config-site.dist.php ]]; then
-   cp /etc/piler/config-site.dist.php /etc/piler/config-site.php
+if [[ ! -f /etc/piler/config-site.php ]] && [[ -f ${BUILD_DIR}/etc/config-site.dist.php ]]; then
+   cp ${BUILD_DIR}/etc/config-site.dist.php /etc/piler/config-site.php
 fi
 
 log "Checking for /etc/piler/sites"
@@ -131,5 +131,9 @@ if [[ $(pgrep -c systemd) -gt 0 && -x /bin/systemctl ]]; then
    systemctl daemon-reload
 fi
 
+rm -rf /tmp/*
+rm -rf /var/tmp/*
+
+crontab -u $PILER_USER /usr/share/piler/piler.cron
 
 log "postinstall has finished"
