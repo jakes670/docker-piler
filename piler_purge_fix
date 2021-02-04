@@ -1,0 +1,18 @@
+2 issues with pilerpurge
+
+Issue 1. cant find queue dir
+
+https://bitbucket.org/jsuto/piler/issues/880/pilerpurge-not-working
+
+had to add 
+
+queuedir=/var/piler/store
+
+to /etc/piler/piler.conf in docker image
+
+Issue 2. used pilepurge patch to adress "pilerpurge.py doesn't use remote sql server"
+
+Used pilerpurg.py from patch https://bitbucket.org/jsuto/piler/src/704030b2826e6c94a6dcd3bca7dcc3984083b625/util/pilerpurge.py
+
+
+I updated the docker-complose file not the most effective way but I am new to dockerbuild
